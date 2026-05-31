@@ -415,7 +415,11 @@ export const db = {
       return mockDB.addCierre(cierre);
     } else {
       const ref = collection(dbInstance, 'cierres');
-      return addDoc(ref, cierre);
+      const cierreConFecha = {
+        ...cierre,
+        fechaCierre: cierre.fechaCierre || new Date().toISOString()
+      };
+      return addDoc(ref, cierreConFecha);
     }
   },
 

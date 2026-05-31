@@ -198,7 +198,8 @@ export function mountHistorial(container, state) {
             mes: state.currentMonth,
             totalGeneral,
             pagos,
-            saldos
+            saldos,
+            fechaCierre: new Date().toISOString()
           };
 
           // 2. Marcar los gastos del mes como cerrados en la DB
