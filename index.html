@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gastos Consultorio - Control de Saldos</title>
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Aplicación móvil para la gestión de gastos compartidos y cálculo de saldos del consultorio.">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Custom Tailwind Configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontSize: {
+            '2xs': '0.625rem',
+            '3xs': '0.5rem',
+          },
+          scale: {
+            '98': '0.98',
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body class="bg-[#0b0f19] text-[#f3f4f6]">
+
+  <!-- Contenedor Principal (Simulación App Mobile) -->
+  <div class="min-h-screen flex flex-col max-w-md mx-auto bg-[#0b0f19]/80 border-x border-white/5 shadow-2xl relative">
+    
+    <!-- Barra superior de sesión (Oculta por defecto) -->
+    <header id="app-header" class="hidden glass-navbar border-b border-white/5 py-3.5 px-4 flex items-center justify-between z-40 sticky top-0">
+      <div class="flex items-center gap-2">
+        <div id="user-avatar" class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 font-bold flex items-center justify-center text-sm border border-indigo-500/20 shadow-md">
+          U
+        </div>
+        <div class="leading-none">
+          <span id="user-name" class="text-xs font-bold text-white block">Cargando...</span>
+          <span id="user-email" class="text-[9px] text-gray-400 block truncate max-w-[170px] mt-0.5">email@gmail.com</span>
+        </div>
+      </div>
+      <button id="btn-logout" class="p-2 hover:bg-rose-500/10 rounded-lg text-gray-400 hover:text-rose-400 active:scale-95 transition-all" title="Cerrar Sesión">
+        <svg class="icon w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </button>
+    </header>
+
+    <!-- Contenido Dinámico de la SPA -->
+    <main id="app-content" class="flex-grow overflow-y-auto px-1">
+      <!-- Se inyecta la vista activa aquí -->
+      <div class="flex items-center justify-center min-h-[70vh]">
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500"></div>
+      </div>
+    </main>
+
+    <!-- Barra de Navegación Inferior Flotante (Glassmorphism, Oculta por defecto) -->
+    <nav id="app-navbar" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm glass-navbar rounded-2xl border border-white/10 shadow-lg px-2 py-3 z-50">
+      <div class="flex justify-around items-center">
+        <!-- Dashboard Button -->
+        <a href="#dashboard" id="nav-dashboard" class="nav-link flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all duration-200">
+          <svg class="icon w-6 h-6" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+            <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+            <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+            <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+          </svg>
+          <span class="text-3xs uppercase tracking-widest">Saldos</span>
+        </a>
+
+        <!-- Servicios Button -->
+        <a href="#servicios" id="nav-servicios" class="nav-link flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all duration-200">
+          <svg class="icon w-6 h-6" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12h14"></path>
+          </svg>
+          <span class="text-3xs uppercase tracking-widest">Gastos</span>
+        </a>
+
+        <!-- Historial Button -->
+        <a href="#historial" id="nav-historial" class="nav-link flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all duration-200">
+          <svg class="icon w-6 h-6" viewBox="0 0 24 24">
+            <path d="M12 8v4l3 3"></path>
+            <circle cx="12" cy="12" r="9"></circle>
+          </svg>
+          <span class="text-3xs uppercase tracking-widest">Historial</span>
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Entry Script -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
