@@ -314,14 +314,15 @@ export const db = {
     } else {
       const q = query(
         collection(dbInstance, 'gastos'), 
-        where('mes', '==', mes),
-        orderBy('fecha', 'asc')
+        where('mes', '==', mes)
       );
       return onSnapshot(q, (snapshot) => {
         const gastos = [];
         snapshot.forEach((doc) => {
           gastos.push({ id: doc.id, ...doc.data() });
         });
+        // Ordenar por fecha del lado del cliente para evitar requerir un índice compuesto en Firestore
+        gastos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
         callback(gastos);
       }, (error) => {
         console.error("Error en onSnapshot de gastos:", error);
@@ -336,14 +337,15 @@ export const db = {
     } else {
       const q = query(
         collection(dbInstance, 'gastos'), 
-        where('mes', '==', mes),
-        orderBy('fecha', 'asc')
+        where('mes', '==', mes)
       );
       const snapshot = await getDocs(q);
       const gastos = [];
       snapshot.forEach((doc) => {
         gastos.push({ id: doc.id, ...doc.data() });
       });
+      // Ordenar por fecha del lado del cliente para evitar requerir un índice compuesto en Firestore
+      gastos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
       return gastos;
     }
   },
