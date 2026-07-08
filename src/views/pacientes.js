@@ -340,34 +340,63 @@ export function mountPacientes(container, state) {
           </div>
 
           <div class="flex items-center gap-4">
-            <span class="font-extrabold text-white text-base">$${formatMonto(montoTotal)}</span>
-            <button 
-              class="btn-delete-deuda p-2 hover:bg-rose-500/15 rounded-lg text-gray-500 hover:text-rose-400 active:scale-95 transition-all cursor-pointer"
-              data-id="${d.id}"
-              title="Eliminar sesión"
-            >
-              <svg class="icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-            </button>
+            <div class="text-right">
+              <span class="font-extrabold text-white text-base block">$${formatMonto(montoTotal)}</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              ${!isPaid ? `
+                <button 
+                  class="btn-cobrar-deuda-rapida p-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg active:scale-95 transition-all cursor-pointer"
+                  data-id="${d.id}"
+                  data-nombre="${d.nombre_paciente}"
+                  data-monto-total="${montoTotal}"
+                  data-resta="${resta}"
+                  title="Cobrar sesión (Marcar como Pagado)"
+                >
+                  <svg class="icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </button>
+              ` : ''}
+              <button 
+                class="btn-delete-deuda p-2 hover:bg-rose-500/15 rounded-lg text-gray-500 hover:text-rose-400 active:scale-95 transition-all cursor-pointer"
+                data-id="${d.id}"
+                title="Eliminar sesión"
+              >
+                <svg class="icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+              </button>
+            </div>
           </div>
         </div>
       `;
     }).join('');
 
-    // Configurar listener para alternar estado con un solo click
+    // Configurar listener para alternar estado abriendo modal de confirmación
     const badges = listContainer.querySelectorAll('.badge-estado');
     badges.forEach(badge => {
-      badge.addEventListener('click', async () => {
+      badge.addEventListener('click', () => {
         const id = badge.getAttribute('data-id');
         const estadoActual = badge.getAttribute('data-estado');
-        const montoTotal = Number(badge.getAttribute('data-monto'));
         if (estadoActual === 'Debe') {
-          try {
-            await db.updateDeudaEstado(id, 'Pagado', montoTotal);
-          } catch (error) {
-            console.error("Error al actualizar estado:", error);
-            alert("No se pudo actualizar el estado del cobro.");
+          const card = badge.closest('.glass-card');
+          const checkBtn = card.querySelector('.btn-cobrar-deuda-rapida');
+          if (checkBtn) {
+            const nombre = checkBtn.getAttribute('data-nombre');
+            const montoTotal = Number(checkBtn.getAttribute('data-monto-total'));
+            const resta = Number(checkBtn.getAttribute('data-resta'));
+            openConfirmacionPagoModal(id, nombre, resta, montoTotal);
           }
         }
+      });
+    });
+
+    // Configurar listener para el botón de acción rápida de cobrar
+    const cobrarBtns = listContainer.querySelectorAll('.btn-cobrar-deuda-rapida');
+    cobrarBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const nombre = btn.getAttribute('data-nombre');
+        const montoTotal = Number(btn.getAttribute('data-monto-total'));
+        const resta = Number(btn.getAttribute('data-resta'));
+        openConfirmacionPagoModal(id, nombre, resta, montoTotal);
       });
     });
 
@@ -751,6 +780,66 @@ export function mountPacientes(container, state) {
         alert("No se pudieron guardar los cambios.");
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = 'Guardar';
+      }
+    });
+  }
+
+  function openConfirmacionPagoModal(idDeuda, nombrePaciente, montoCobrar, montoTotal) {
+    // Eliminar modal anterior si existe
+    const oldModal = document.getElementById('modal-confirmacion-pago');
+    if (oldModal) oldModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-confirmacion-pago';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in';
+    modal.innerHTML = `
+      <div class="glass-card rounded-2xl w-full max-w-xs p-5 border border-white/10 relative overflow-hidden animate-fade-in shadow-2xl">
+        <div class="absolute -right-12 -bottom-12 w-28 h-28 bg-emerald-600/10 rounded-full blur-2xl"></div>
+        <h3 class="text-base font-bold text-white mb-2 flex items-center gap-2">
+          <svg class="icon text-emerald-400 w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Confirmar Cobro
+        </h3>
+        <p class="text-xs text-gray-300 mb-4 font-medium leading-relaxed">
+          ¿Confirmas que el paciente <span class="font-extrabold text-white">${nombrePaciente}</span> ya abonó los <span class="font-extrabold text-emerald-400">$${formatMonto(montoCobrar)}</span> de esta sesión?
+        </p>
+        
+        <div class="flex gap-2.5 pt-1.5">
+          <button 
+            type="button" 
+            id="btn-cancelar-cobro-modal" 
+            class="flex-1 py-2.5 border border-white/10 hover:border-white/20 text-gray-300 text-3xs font-bold rounded-xl active:scale-95 transition-all cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="button"
+            id="btn-confirmar-cobro-modal"
+            class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-3xs font-bold rounded-xl shadow-lg shadow-emerald-600/25 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+          >
+            Sí, Confirmar
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const btnCancel = modal.querySelector('#btn-cancelar-cobro-modal');
+    btnCancel.addEventListener('click', () => modal.remove());
+
+    const btnConfirm = modal.querySelector('#btn-confirmar-cobro-modal');
+    btnConfirm.addEventListener('click', async () => {
+      btnConfirm.disabled = true;
+      btnConfirm.innerHTML = 'Confirmando...';
+
+      try {
+        await db.updateDeudaEstado(idDeuda, 'Pagado', montoTotal);
+        modal.remove();
+      } catch (error) {
+        console.error("Error al confirmar pago:", error);
+        alert("No se pudo registrar el pago.");
+        btnConfirm.disabled = false;
+        btnConfirm.innerHTML = 'Sí, Confirmar';
       }
     });
   }
