@@ -251,6 +251,154 @@ class MockDB {
       delete this.listeners[listenerId];
     };
   }
+
+  // --- Pacientes & Deudas Mock ---
+  _getPacientes() {
+    const data = localStorage.getItem('consultorio_pacientes');
+    return data ? JSON.parse(data) : [];
+  }
+
+  _savePacientes(pacientes) {
+    localStorage.setItem('consultorio_pacientes', JSON.stringify(pacientes));
+    this.notifyAll();
+  }
+
+  _getDeudas() {
+    const data = localStorage.getItem('consultorio_deudas_pacientes');
+    return data ? JSON.parse(data) : [];
+  }
+
+  _saveDeudas(deudas) {
+    localStorage.setItem('consultorio_deudas_pacientes', JSON.stringify(deudas));
+    this.notifyAll();
+  }
+
+  addPaciente(paciente) {
+    const pacientes = this._getPacientes();
+    const newPaciente = {
+      id: 'mock_paciente_' + Math.random().toString(36).substr(2, 9),
+      ...paciente
+    };
+    pacientes.push(newPaciente);
+    this._savePacientes(pacientes);
+    return Promise.resolve(newPaciente);
+  }
+
+  subscribePacientes(email, callback) {
+    const listenerId = 'pacientes_' + Math.random().toString(36).substr(2, 9);
+    const runCallback = () => {
+      const allPacientes = this._getPacientes();
+      const filtered = allPacientes.filter(p => p.id_profesional === email);
+      // Ordenar alfabéticamente por apellido y nombre
+      filtered.sort((a, b) => {
+        const nameA = `${a.apellido || ''} ${a.nombre || ''}`.toLowerCase();
+        const nameB = `${b.apellido || ''} ${b.nombre || ''}`.toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+      callback(filtered);
+    };
+
+    this.listeners[listenerId] = runCallback;
+    runCallback();
+
+    return () => {
+      delete this.listeners[listenerId];
+    };
+  }
+
+  addDeudaPaciente(deuda) {
+    const deudas = this._getDeudas();
+    const newDeuda = {
+      id: 'mock_deuda_' + Math.random().toString(36).substr(2, 9),
+      ...deuda,
+      monto_pagado: deuda.estado === 'Pagado' ? Number(deuda.monto) : Number(deuda.monto_pagado || 0)
+    };
+    deudas.push(newDeuda);
+    this._saveDeudas(deudas);
+    return Promise.resolve(newDeuda);
+  }
+
+  subscribeDeudasPacientes(email, callback) {
+    const listenerId = 'deudas_' + Math.random().toString(36).substr(2, 9);
+    const runCallback = () => {
+      const allDeudas = this._getDeudas();
+      const filtered = allDeudas.filter(d => d.id_profesional === email);
+      // Ordenar por fecha descendente
+      filtered.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      callback(filtered);
+    };
+
+    this.listeners[listenerId] = runCallback;
+    runCallback();
+
+    return () => {
+      delete this.listeners[listenerId];
+    };
+  }
+
+  updateDeudaEstado(id, nuevoEstado, montoTotal) {
+    let deudas = this._getDeudas();
+    deudas = deudas.map(d => {
+      if (d.id === id) {
+        const updates = { ...d, estado: nuevoEstado };
+        if (nuevoEstado === 'Pagado') {
+          updates.monto_pagado = montoTotal !== undefined ? Number(montoTotal) : Number(d.monto);
+        }
+        return updates;
+      }
+      return d;
+    });
+    this._saveDeudas(deudas);
+    return Promise.resolve();
+  }
+
+  updateDeudaPago(id, nuevoEstado, nuevoMontoPagado) {
+    let deudas = this._getDeudas();
+    deudas = deudas.map(d => {
+      if (d.id === id) {
+        return { ...d, estado: nuevoEstado, monto_pagado: Number(nuevoMontoPagado) };
+      }
+      return d;
+    });
+    this._saveDeudas(deudas);
+    return Promise.resolve();
+  }
+
+  deleteDeudaPaciente(id) {
+    let deudas = this._getDeudas();
+    deudas = deudas.filter(d => d.id !== id);
+    this._saveDeudas(deudas);
+    return Promise.resolve();
+  }
+
+  registrarPagoPaciente(idPaciente, montoAbono) {
+    let deudas = this._getDeudas();
+    const impagas = deudas.filter(d => d.id_paciente === idPaciente && d.estado === 'Debe');
+    impagas.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+    let restante = Number(montoAbono);
+    
+    deudas = deudas.map(d => {
+      if (d.id_paciente === idPaciente && d.estado === 'Debe' && restante > 0) {
+        const montoTotal = Number(d.monto);
+        const montoYaPagado = Number(d.monto_pagado || 0);
+        const deudaRestante = montoTotal - montoYaPagado;
+
+        if (restante >= deudaRestante) {
+          restante -= deudaRestante;
+          return { ...d, estado: 'Pagado', monto_pagado: montoTotal };
+        } else {
+          const nuevoPago = montoYaPagado + restante;
+          restante = 0;
+          return { ...d, estado: 'Debe', monto_pagado: nuevoPago };
+        }
+      }
+      return d;
+    });
+
+    this._saveDeudas(deudas);
+    return Promise.resolve();
+  }
 }
 
 const mockDB = new MockDB();
@@ -438,6 +586,154 @@ export const db = {
       }, (error) => {
         console.error("Error en onSnapshot de cierres:", error);
       });
+    }
+  },
+
+  // --- MÓDULO PACIENTES & DEUDAS ---
+  addPaciente: async (paciente) => {
+    if (useMock) {
+      return mockDB.addPaciente(paciente);
+    } else {
+      const ref = collection(dbInstance, 'pacientes');
+      return addDoc(ref, paciente);
+    }
+  },
+
+  subscribePacientes: (email, callback) => {
+    if (useMock) {
+      return mockDB.subscribePacientes(email, callback);
+    } else {
+      const q = query(
+        collection(dbInstance, 'pacientes'),
+        where('id_profesional', '==', email)
+      );
+      return onSnapshot(q, (snapshot) => {
+        const pacientes = [];
+        snapshot.forEach((doc) => {
+          pacientes.push({ id: doc.id, ...doc.data() });
+        });
+        // Ordenar alfabéticamente por apellido y luego nombre
+        pacientes.sort((a, b) => {
+          const nameA = `${a.apellido || ''} ${a.nombre || ''}`.toLowerCase();
+          const nameB = `${b.apellido || ''} ${b.nombre || ''}`.toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+        callback(pacientes);
+      }, (error) => {
+        console.error("Error en onSnapshot de pacientes:", error);
+      });
+    }
+  },
+
+  addDeudaPaciente: async (deuda) => {
+    const deudaConPago = {
+      ...deuda,
+      monto_pagado: deuda.estado === 'Pagado' ? Number(deuda.monto) : Number(deuda.monto_pagado || 0)
+    };
+    if (useMock) {
+      return mockDB.addDeudaPaciente(deudaConPago);
+    } else {
+      const ref = collection(dbInstance, 'deudas_pacientes');
+      return addDoc(ref, deudaConPago);
+    }
+  },
+
+  subscribeDeudasPacientes: (email, callback) => {
+    if (useMock) {
+      return mockDB.subscribeDeudasPacientes(email, callback);
+    } else {
+      const q = query(
+        collection(dbInstance, 'deudas_pacientes'),
+        where('id_profesional', '==', email)
+      );
+      return onSnapshot(q, (snapshot) => {
+        const deudas = [];
+        snapshot.forEach((doc) => {
+          deudas.push({ id: doc.id, ...doc.data() });
+        });
+        // Ordenar por fecha descendente
+        deudas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        callback(deudas);
+      }, (error) => {
+        console.error("Error en onSnapshot de deudas_pacientes:", error);
+      });
+    }
+  },
+
+  updateDeudaEstado: async (id, nuevoEstado, montoTotal) => {
+    if (useMock) {
+      return mockDB.updateDeudaEstado(id, nuevoEstado, montoTotal);
+    } else {
+      const docRef = doc(dbInstance, 'deudas_pacientes', id);
+      const updates = { estado: nuevoEstado };
+      if (nuevoEstado === 'Pagado' && montoTotal !== undefined) {
+        updates.monto_pagado = Number(montoTotal);
+      }
+      return setDoc(docRef, updates, { merge: true });
+    }
+  },
+
+  updateDeudaPago: async (id, nuevoEstado, nuevoMontoPagado) => {
+    if (useMock) {
+      return mockDB.updateDeudaPago(id, nuevoEstado, nuevoMontoPagado);
+    } else {
+      const docRef = doc(dbInstance, 'deudas_pacientes', id);
+      return setDoc(docRef, { 
+        estado: nuevoEstado, 
+        monto_pagado: Number(nuevoMontoPagado) 
+      }, { merge: true });
+    }
+  },
+
+  deleteDeudaPaciente: async (id) => {
+    if (useMock) {
+      return mockDB.deleteDeudaPaciente(id);
+    } else {
+      const docRef = doc(dbInstance, 'deudas_pacientes', id);
+      return deleteDoc(docRef);
+    }
+  },
+
+  registrarPagoPaciente: async (idPaciente, montoAbono) => {
+    if (useMock) {
+      return mockDB.registrarPagoPaciente(idPaciente, montoAbono);
+    } else {
+      const q = query(
+        collection(dbInstance, 'deudas_pacientes'),
+        where('id_paciente', '==', idPaciente),
+        where('estado', '==', 'Debe')
+      );
+      const snapshot = await getDocs(q);
+      const deudasImpagas = [];
+      snapshot.forEach(doc => {
+        deudasImpagas.push({ id: doc.id, ...doc.data() });
+      });
+
+      deudasImpagas.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+      let restante = Number(montoAbono);
+      const promises = [];
+
+      for (const d of deudasImpagas) {
+        if (restante <= 0) break;
+
+        const montoTotal = Number(d.monto);
+        const montoYaPagado = Number(d.monto_pagado || 0);
+        const deudaRestante = montoTotal - montoYaPagado;
+        const docRef = doc(dbInstance, 'deudas_pacientes', d.id);
+
+        if (restante >= deudaRestante) {
+          restante -= deudaRestante;
+          promises.push(setDoc(docRef, { estado: 'Pagado', monto_pagado: montoTotal }, { merge: true }));
+        } else {
+          const nuevoPago = montoYaPagado + restante;
+          restante = 0;
+          promises.push(setDoc(docRef, { estado: 'Debe', monto_pagado: nuevoPago }, { merge: true }));
+        }
+      }
+
+      await Promise.all(promises);
+      return Promise.resolve();
     }
   },
 

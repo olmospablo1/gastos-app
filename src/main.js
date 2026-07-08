@@ -3,6 +3,7 @@ import { mountLogin } from './views/login.js';
 import { mountDashboard } from './views/dashboard.js';
 import { mountServicios } from './views/servicios.js';
 import { mountHistorial } from './views/historial.js';
+import { mountPacientes } from './views/pacientes.js';
 
 // Estado global de la aplicación SPA
 const state = {
@@ -29,7 +30,8 @@ const routes = {
   '#login': mountLogin,
   '#dashboard': mountDashboard,
   '#servicios': mountServicios,
-  '#historial': mountHistorial
+  '#historial': mountHistorial,
+  '#pacientes': mountPacientes
 };
 
 // Función principal del enrutador
