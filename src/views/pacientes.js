@@ -534,16 +534,29 @@ export function mountPacientes(container, state) {
             </p>
           </div>
 
-          <a 
-            href="${whatsappUrl}" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            class="p-2.5 bg-emerald-500/10 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400 rounded-xl active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer ml-3 shrink-0"
-            title="Enviar mensaje por WhatsApp"
-          >
-            <svg class="icon w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-            <span class="text-3xs font-semibold">WhatsApp</span>
-          </a>
+          <div class="flex items-center gap-2 ml-3 shrink-0">
+            <button 
+              class="btn-editar-paciente p-2.5 bg-indigo-500/10 hover:bg-indigo-500/25 border border-indigo-500/20 text-indigo-400 rounded-xl active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+              data-id="${p.id}"
+              data-nombre="${p.nombre}"
+              data-apellido="${p.apellido}"
+              data-telefono="${p.telefono}"
+              title="Editar datos del paciente"
+            >
+              <svg class="icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+
+            <a 
+              href="${whatsappUrl}" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="p-2.5 bg-emerald-500/10 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400 rounded-xl active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+              title="Enviar mensaje por WhatsApp"
+            >
+              <svg class="icon w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+              <span class="text-3xs font-semibold">WhatsApp</span>
+            </a>
+          </div>
         </div>
       `;
     }).join('');
@@ -556,6 +569,18 @@ export function mountPacientes(container, state) {
         const nombrePaciente = btn.getAttribute('data-nombre');
         const deuda = Number(btn.getAttribute('data-deuda'));
         openPaymentModal(idPaciente, nombrePaciente, deuda);
+      });
+    });
+
+    // Configurar listener para abrir modal de edición de paciente
+    const editBtns = listContainer.querySelectorAll('.btn-editar-paciente');
+    editBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idPaciente = btn.getAttribute('data-id');
+        const nombre = btn.getAttribute('data-nombre');
+        const apellido = btn.getAttribute('data-apellido');
+        const telefono = btn.getAttribute('data-telefono');
+        openEditPacienteModal(idPaciente, nombre, apellido, telefono);
       });
     });
   }
@@ -640,6 +665,92 @@ export function mountPacientes(container, state) {
         alert("No se pudo procesar el pago.");
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = 'Registrar';
+      }
+    });
+  }
+
+  function openEditPacienteModal(idPaciente, nombre, apellido, telefono) {
+    // Eliminar modal anterior si existe
+    const oldModal = document.getElementById('modal-edit-paciente');
+    if (oldModal) oldModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-edit-paciente';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in';
+    modal.innerHTML = `
+      <div class="glass-card rounded-2xl w-full max-w-xs p-5 border border-white/10 relative overflow-hidden animate-fade-in shadow-2xl">
+        <div class="absolute -right-12 -bottom-12 w-28 h-28 bg-indigo-600/10 rounded-full blur-2xl"></div>
+        <h3 class="text-base font-bold text-white mb-2 flex items-center gap-2">
+          <svg class="icon text-indigo-400 w-4.5 h-4.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          Editar Paciente
+        </h3>
+        <p class="text-3xs text-gray-400 mb-4">Actualizá los datos de contacto del paciente.</p>
+        
+        <form id="form-modal-edit-paciente" class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-gray-400 text-3xs font-semibold uppercase tracking-wider mb-1.5" for="edit-nombre">Nombre</label>
+              <input type="text" id="edit-nombre" value="${nombre}" class="w-full glass-input rounded-xl px-3 py-2 text-xs focus:outline-none" required />
+            </div>
+            <div>
+              <label class="block text-gray-400 text-3xs font-semibold uppercase tracking-wider mb-1.5" for="edit-apellido">Apellido</label>
+              <input type="text" id="edit-apellido" value="${apellido}" class="w-full glass-input rounded-xl px-3 py-2 text-xs focus:outline-none" required />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-gray-400 text-3xs font-semibold uppercase tracking-wider mb-1.5" for="edit-telefono">Teléfono (Celular)</label>
+            <input type="tel" id="edit-telefono" value="${telefono}" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs focus:outline-none" required />
+          </div>
+
+          <div class="flex gap-2.5 pt-1.5">
+            <button 
+              type="button" 
+              id="btn-cancelar-edit" 
+              class="flex-1 py-2.5 border border-white/10 hover:border-white/20 text-gray-300 text-3xs font-bold rounded-xl active:scale-95 transition-all cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-3xs font-bold rounded-xl shadow-lg shadow-indigo-600/25 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+            >
+              Guardar
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const btnCancel = modal.querySelector('#btn-cancelar-edit');
+    btnCancel.addEventListener('click', () => modal.remove());
+
+    const form = modal.querySelector('#form-modal-edit-paciente');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nuevoNombre = form.querySelector('#edit-nombre').value.trim();
+      const nuevoApellido = form.querySelector('#edit-apellido').value.trim();
+      const nuevoTelefono = form.querySelector('#edit-telefono').value.trim();
+
+      const btnSubmit = form.querySelector('button[type="submit"]');
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = 'Guardando...';
+
+      try {
+        await db.updatePaciente(idPaciente, {
+          nombre: nuevoNombre,
+          apellido: nuevoApellido,
+          telefono: nuevoTelefono
+        });
+        modal.remove();
+        alert('Datos del paciente actualizados con éxito.');
+      } catch (error) {
+        console.error("Error al actualizar paciente:", error);
+        alert("No se pudieron guardar los cambios.");
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = 'Guardar';
       }
     });
   }

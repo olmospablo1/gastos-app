@@ -284,6 +284,31 @@ class MockDB {
     return Promise.resolve(newPaciente);
   }
 
+  updatePaciente(id, updates) {
+    let pacientes = this._getPacientes();
+    pacientes = pacientes.map(p => {
+      if (p.id === id) {
+        return { ...p, ...updates };
+      }
+      return p;
+    });
+    this._savePacientes(pacientes);
+
+    // Propagar cambio de nombre a las deudas/sesiones
+    if (updates.nombre || updates.apellido) {
+      const nuevoNombreCompleto = `${updates.nombre || ''} ${updates.apellido || ''}`.trim();
+      let deudas = this._getDeudas();
+      deudas = deudas.map(d => {
+        if (d.id_paciente === id) {
+          return { ...d, nombre_paciente: nuevoNombreCompleto };
+        }
+        return d;
+      });
+      this._saveDeudas(deudas);
+    }
+    return Promise.resolve();
+  }
+
   subscribePacientes(email, callback) {
     const listenerId = 'pacientes_' + Math.random().toString(36).substr(2, 9);
     const runCallback = () => {
@@ -596,6 +621,32 @@ export const db = {
     } else {
       const ref = collection(dbInstance, 'pacientes');
       return addDoc(ref, paciente);
+    }
+  },
+
+  updatePaciente: async (id, updates) => {
+    if (useMock) {
+      return mockDB.updatePaciente(id, updates);
+    } else {
+      const docRef = doc(dbInstance, 'pacientes', id);
+      await setDoc(docRef, updates, { merge: true });
+
+      // Propagar cambio de nombre a las deudas/sesiones
+      if (updates.nombre || updates.apellido) {
+        const nuevoNombreCompleto = `${updates.nombre || ''} ${updates.apellido || ''}`.trim();
+        const q = query(
+          collection(dbInstance, 'deudas_pacientes'),
+          where('id_paciente', '==', id)
+        );
+        const snapshot = await getDocs(q);
+        const promises = [];
+        snapshot.forEach(d => {
+          const debtRef = doc(dbInstance, 'deudas_pacientes', d.id);
+          promises.push(setDoc(debtRef, { nombre_paciente: nuevoNombreCompleto }, { merge: true }));
+        });
+        await Promise.all(promises);
+      }
+      return Promise.resolve();
     }
   },
 
