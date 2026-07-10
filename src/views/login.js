@@ -81,7 +81,7 @@ export function mountLogin(container, state) {
         window.location.hash = '#dashboard';
       } catch (err) {
         console.error("Error al autenticar con Google:", err);
-        alert("Error de autenticación. Verifica que tengas conexión a internet y los popups habilitados.");
+        await window.appAlert('Error de Conexión', "Error de autenticación. Verifica que tengas conexión a internet y los popups habilitados.");
       } finally {
         btnGoogle.disabled = false;
         btnGoogle.innerHTML = `

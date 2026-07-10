@@ -261,7 +261,7 @@ export function mountPacientes(container, state) {
           inputFecha.value = new Date().toISOString().split('T')[0];
         } catch (error) {
           console.error("Error al registrar sesión:", error);
-          alert("Error al registrar la sesión.");
+          await window.appAlert('Error', "Error al registrar la sesión.");
         } finally {
           btnSubmit.disabled = false;
           btnSubmit.innerHTML = `
@@ -452,12 +452,12 @@ export function mountPacientes(container, state) {
     deleteBtns.forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
-        if (confirm("¿Estás seguro de que querés eliminar el registro de esta sesión?")) {
+        if (await window.appConfirm('Eliminar Sesión', "¿Estás seguro de que querés eliminar el registro de esta sesión?")) {
           try {
             await db.deleteDeudaPaciente(id);
           } catch (error) {
             console.error("Error al eliminar sesión:", error);
-            alert("No se pudo eliminar el registro.");
+            await window.appAlert('Error', "No se pudo eliminar el registro.");
           }
         }
       });
@@ -538,7 +538,7 @@ export function mountPacientes(container, state) {
           formPaciente.reset();
         } catch (error) {
           console.error("Error al registrar paciente:", error);
-          alert("Error al registrar paciente.");
+          await window.appAlert('Error', "Error al registrar paciente.");
         } finally {
           btnSubmit.disabled = false;
           btnSubmit.innerHTML = `
@@ -735,10 +735,10 @@ export function mountPacientes(container, state) {
       try {
         await db.registrarPagoPaciente(idPaciente, abonoMonto);
         modal.remove();
-        alert(`¡Pago de $${formatMonto(abonoMonto)} registrado con éxito!`);
+        await window.appAlert('Pago Registrado', `¡Pago de $${formatMonto(abonoMonto)} registrado con éxito!`);
       } catch (error) {
         console.error("Error al registrar pago:", error);
-        alert("No se pudo procesar el pago.");
+        await window.appAlert('Error', "No se pudo procesar el pago.");
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = 'Registrar';
       }
@@ -821,10 +821,10 @@ export function mountPacientes(container, state) {
           telefono: nuevoTelefono
         });
         modal.remove();
-        alert('Datos del paciente actualizados con éxito.');
+        await window.appAlert('Paciente Guardado', 'Datos del paciente actualizados con éxito.');
       } catch (error) {
         console.error("Error al actualizar paciente:", error);
-        alert("No se pudieron guardar los cambios.");
+        await window.appAlert('Error', "No se pudieron guardar los cambios.");
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = 'Guardar';
       }
@@ -884,7 +884,7 @@ export function mountPacientes(container, state) {
         modal.remove();
       } catch (error) {
         console.error("Error al confirmar pago:", error);
-        alert("No se pudo registrar el pago.");
+        await window.appAlert('Error', "No se pudo registrar el pago.");
         btnConfirm.disabled = false;
         btnConfirm.innerHTML = 'Sí, Confirmar';
       }
@@ -892,8 +892,11 @@ export function mountPacientes(container, state) {
   }
 
   // --- ESCUCHA DE DATOS EN TIEMPO REAL ---
+  let isInitializing = true;
+
   unsubscribePacientes = db.subscribePacientes(emailProfesor, (pacientes) => {
     listPacientes = pacientes;
+    if (isInitializing) return;
     if (activeTab === 'pacientes') {
       updatePacientesList();
     } else if (activeTab === 'sesiones') {
@@ -903,12 +906,15 @@ export function mountPacientes(container, state) {
 
   unsubscribeDeudas = db.subscribeDeudasPacientes(emailProfesor, (deudas) => {
     listDeudas = deudas;
+    if (isInitializing) return;
     if (activeTab === 'sesiones') {
       renderTabSesiones();
     } else if (activeTab === 'pacientes') {
       updatePacientesList();
     }
   });
+
+  isInitializing = false;
 
   // Mostrar pestaña inicial
   switchTab('sesiones');

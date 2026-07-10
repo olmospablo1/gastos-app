@@ -149,16 +149,16 @@ export function mountHistorial(container, state) {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation(); // Evitar que se colapse el acordeón
         const mes = btn.getAttribute('data-mes');
-        if (confirm(`¿Estás seguro de que deseas reabrir el mes de ${formatMes(mes)}? Esto revertirá el cierre y te permitirá editar los gastos nuevamente.`)) {
+        if (await window.appConfirm('Reabrir Mes', `¿Estás seguro de que deseas reabrir el mes de ${formatMes(mes)}? Esto revertirá el cierre y te permitirá editar los gastos nuevamente.`)) {
           try {
             await db.reabrirMes(mes);
             state.currentMonth = mes;
             localStorage.setItem('consultorio_current_month', mes);
-            alert(`El mes de ${formatMes(mes)} ha sido reabierto con éxito.`);
+            await window.appAlert('Mes Reabierto', `El mes de ${formatMes(mes)} ha sido reabierto con éxito.`);
             window.location.hash = '#servicios'; // Redirigir a la vista de gastos para editar
           } catch (err) {
             console.error("Error al reabrir el mes:", err);
-            alert("No se pudo reabrir el mes.");
+            await window.appAlert('Error', "No se pudo reabrir el mes.");
           }
         }
       });
@@ -168,7 +168,13 @@ export function mountHistorial(container, state) {
     const btnCerrar = container.querySelector('#btn-cerrar-mes');
     if (btnCerrar) {
       btnCerrar.addEventListener('click', async () => {
-        if (!confirm(`¿Estás seguro de que deseas cerrar el mes de ${formatMes(state.currentMonth)}?`)) {
+        // Validar que el mes no esté ya cerrado
+        if (cierres.some(c => c.mes === state.currentMonth)) {
+          await window.appAlert('Mes Ya Cerrado', `El mes de ${formatMes(state.currentMonth)} ya ha sido cerrado previamente y figura en el historial.`);
+          return;
+        }
+
+        if (!(await window.appConfirm('Cerrar Mes', `¿Estás seguro de que deseas cerrar el mes de ${formatMes(state.currentMonth)}?`))) {
           return;
         }
 
@@ -222,13 +228,13 @@ export function mountHistorial(container, state) {
           state.currentMonth = nextMonthStr;
           localStorage.setItem('consultorio_current_month', nextMonthStr);
 
-          alert(`¡Mes de ${formatMes(cierre.mes)} cerrado con éxito! Ahora el mes activo es ${formatMes(nextMonthStr)}.`);
+          await window.appAlert('Cierre Exitoso', `¡Mes de ${formatMes(cierre.mes)} cerrado con éxito! Ahora el mes activo es ${formatMes(nextMonthStr)}.`);
           
           // Redirigir al dashboard
           window.location.hash = '#dashboard';
         } catch (err) {
           console.error("Error al realizar el cierre:", err);
-          alert("No se pudo guardar el cierre del mes.");
+          await window.appAlert('Error', "No se pudo guardar el cierre del mes.");
         } finally {
           btnCerrar.disabled = false;
           btnCerrar.innerHTML = `

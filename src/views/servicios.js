@@ -194,7 +194,7 @@ export function mountServicios(container, state) {
             inputFecha.value = new Date().toISOString().split('T')[0];
           } catch (err) {
             console.error("Error al guardar gasto:", err);
-            alert("Error al guardar el gasto.");
+            await window.appAlert('Error', "Error al guardar el gasto.");
           } finally {
             btnSubmit.disabled = false;
             btnSubmit.innerHTML = `
@@ -314,12 +314,12 @@ export function mountServicios(container, state) {
       deleteBtns.forEach(btn => {
         btn.addEventListener('click', async () => {
           const id = btn.getAttribute('data-id');
-          if (confirm("¿Estás seguro de que querés eliminar este gasto?")) {
+          if (await window.appConfirm('Eliminar Gasto', "¿Estás seguro de que querés eliminar este gasto?")) {
             try {
               await db.deleteGasto(id);
             } catch (err) {
               console.error("Error al eliminar gasto:", err);
-              alert("No se pudo eliminar el gasto.");
+              await window.appAlert('Error', "No se pudo eliminar el gasto.");
             }
           }
         });
