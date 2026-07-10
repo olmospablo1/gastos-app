@@ -6,6 +6,7 @@ export function mountPacientes(container, state) {
 
   let activeTab = 'sesiones'; // 'sesiones' | 'pacientes'
   let activeFilter = 'Todos'; // 'Todos' | 'Debe' | 'Pagado'
+  let activePacienteFilter = 'Todos'; // 'Todos' | id_paciente
   let searchQuery = '';
 
   let listPacientes = [];
@@ -177,6 +178,30 @@ export function mountPacientes(container, state) {
             `;
           }).join('')}
         </div>
+
+        <!-- Pills de Pacientes (Filtro por Paciente) -->
+        <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-none pt-1">
+          <button 
+            class="pill-paciente-filter text-3xs px-3 py-1 rounded-lg border transition-all shrink-0 active:scale-95 cursor-pointer ${activePacienteFilter === 'Todos' ? 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300 font-bold' : 'border-white/5 text-gray-400 bg-white/1'}" 
+            data-paciente-id="Todos"
+          >
+            Todos los Pacientes
+          </button>
+          ${listPacientes.map(p => {
+            const isActive = activePacienteFilter === p.id;
+            const activeClass = isActive 
+              ? 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300 font-bold' 
+              : 'border-white/5 text-gray-400 bg-white/1 hover:border-white/10';
+            return `
+              <button 
+                class="pill-paciente-filter text-3xs px-3 py-1 rounded-lg border transition-all shrink-0 active:scale-95 cursor-pointer ${activeClass}" 
+                data-paciente-id="${p.id}"
+              >
+                ${p.apellido}, ${p.nombre}
+              </button>
+            `;
+          }).join('')}
+        </div>
       </div>
 
       <!-- Resumen Financiero del Profesional -->
@@ -273,6 +298,23 @@ export function mountPacientes(container, state) {
       });
     });
 
+    // Configurar pills de filtro de pacientes
+    const patientPills = tabContent.querySelectorAll('.pill-paciente-filter');
+    patientPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        activePacienteFilter = pill.getAttribute('data-paciente-id');
+        // Actualizar UI activa de pills
+        patientPills.forEach(p => {
+          p.classList.remove('bg-indigo-600/20', 'border-indigo-500/40', 'text-indigo-300', 'font-bold');
+          p.classList.add('border-white/5', 'text-gray-400', 'bg-white/1');
+        });
+        pill.classList.remove('border-white/5', 'text-gray-400', 'bg-white/1');
+        pill.classList.add('bg-indigo-600/20', 'border-indigo-500/40', 'text-indigo-300', 'font-bold');
+
+        updateDeudasFilteredList();
+      });
+    });
+
     // Iniciar renderizado inicial del listado filtrado
     updateDeudasFilteredList();
   }
@@ -286,6 +328,11 @@ export function mountPacientes(container, state) {
     // Filtro por Pill (Estado)
     if (activeFilter !== 'Todos') {
       filtered = filtered.filter(d => d.estado === activeFilter);
+    }
+
+    // Filtro por Paciente Seleccionado
+    if (activePacienteFilter !== 'Todos') {
+      filtered = filtered.filter(d => d.id_paciente === activePacienteFilter);
     }
 
     // Filtro por Buscador (Nombre)
@@ -346,14 +393,14 @@ export function mountPacientes(container, state) {
             <div class="flex items-center gap-1.5">
               ${!isPaid ? `
                 <button 
-                  class="btn-cobrar-deuda-rapida p-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg active:scale-95 transition-all cursor-pointer"
+                  class="btn-cobrar-deuda-rapida p-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 rounded-lg active:scale-95 transition-all cursor-pointer"
                   data-id="${d.id}"
                   data-nombre="${d.nombre_paciente}"
                   data-monto-total="${montoTotal}"
                   data-resta="${resta}"
                   title="Cobrar sesión (Marcar como Pagado)"
                 >
-                  <svg class="icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <svg class="icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                 </button>
               ` : ''}
               <button 
@@ -850,18 +897,7 @@ export function mountPacientes(container, state) {
     if (activeTab === 'pacientes') {
       updatePacientesList();
     } else if (activeTab === 'sesiones') {
-      const select = tabContent.querySelector('#sesion-paciente');
-      if (select) {
-        const valActual = select.value;
-        select.innerHTML = `
-          <option value="" disabled ${!valActual ? 'selected' : ''}>Elegir paciente...</option>
-          ${listPacientes.map(p => `
-            <option value="${p.id}" data-nombre="${p.nombre} ${p.apellido}" ${p.id === valActual ? 'selected' : ''}>
-              ${p.apellido}, ${p.nombre}
-            </option>
-          `).join('')}
-        `;
-      }
+      renderTabSesiones();
     }
   });
 
